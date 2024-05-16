@@ -1,6 +1,7 @@
 const fs = require('fs')
-const tours = JSON.parse(fs.readFileSync(`./dev-data/data/tours-simple.json`))
+const tours = JSON.parse(fs.readFileSync(`${__dirname}/../dev-data/data/tours-simple.json`))
 
+////////////// CRUD ////////////////////////
 exports.getAllTours = (req, res) => {
   res.json({
     status: 'success',
@@ -56,4 +57,16 @@ exports.deleteTour = (req, res) => {
     status: 'error',
     message: 'This route is not yet defined'
   })
-}  
+}
+
+
+////////////////// MIDDLEWARE //////////////////
+exports.checkBody = (req, res, next) => {
+  if (!req.body.name || !req.body.price) {
+    return res.status(400).json({
+      status: 'fail',
+      message: 'Tour must include a name and a price'
+    })
+  }
+  next()
+}
