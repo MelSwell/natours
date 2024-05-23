@@ -5,7 +5,9 @@
   "main": "app.js",
   "scripts": {
     "start:dev": "nodemon server.js",
-    "start:prod": "cross-env NODE_ENV=production nodemon server.js"
+    "start:prod": "cross-env NODE_ENV=production nodemon server.js",
+    "devdb:seed": "node .\\dev-data\\data\\import-dev-data.js --seed",
+    "devdb:del": "node .\\dev-data\\data\\import-dev-data.js --delete"
   },
   "author": "Seth Cohen",
   "license": "ISC",

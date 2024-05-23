@@ -14,6 +14,13 @@ router
   .post(toursController.createTour);
 
 router
+  .route('/top-5')
+  .get(toursController.aliasTop5, toursController.getAllTours);
+
+router.route('/stats').get(toursController.getTourStats);
+router.route('/monthly-sched/:year').get(toursController.getMonthlySched);
+
+router
   .route('/:id')
   .get(toursController.getTour)
   .patch(toursController.updateTour)

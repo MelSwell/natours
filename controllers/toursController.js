@@ -1,9 +1,17 @@
 const Tour = require('../models/tourModel');
+const APIQuery = require('../utils/apiQuery');
 
 ////////////// CRUD ////////////////////////
+
 exports.getAllTours = async (req, res) => {
   try {
-    const tours = await Tour.find();
+    const apiQuery = new APIQuery(Tour.find(), req.query)
+      .filter()
+      .sort()
+      .project()
+      .paginate();
+
+    const tours = await apiQuery.query;
 
     res.json({
       status: 'success',
@@ -14,14 +22,14 @@ exports.getAllTours = async (req, res) => {
   } catch (err) {
     res.status(404).json({
       status: 'fail',
-      message: 'Placeholder error string',
+      message: err,
     });
   }
 };
 
 exports.getTour = async (req, res) => {
   try {
-    const tour = await Tour.findById(req.params.id);
+    const tour = await Tour.findById(req.params.id).select('-__v');
 
     res.json({
       status: 'success',
@@ -47,7 +55,7 @@ exports.createTour = async (req, res) => {
   } catch (err) {
     res.status(400).json({
       status: 'fail',
-      message: 'Placeholder error string',
+      message: 'Placeholder error',
     });
   }
 };
@@ -85,4 +93,43 @@ exports.deleteTour = async (req, res) => {
       message: err,
     });
   }
+};
+
+exports.getTourStats = async (req, res) => {
+  try {
+    const stats = await Tour.getStats();
+
+    res.json({
+      status: 'success',
+      data: { stats },
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: 'fail',
+      message: err,
+    });
+  }
+};
+
+exports.getMonthlySched = async (req, res) => {
+  try {
+    const sched = await Tour.getMonthlySched(req.params.year * 1);
+
+    res.json({
+      status: 'success',
+      data: { sched },
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: 'fail',
+      message: err,
+    });
+  }
+};
+////////////////////////// MIDDLEWARE ///////////////////////////////
+exports.aliasTop5 = (req, res, next) => {
+  req.query.limit = '5';
+  req.query.sort = '-ratingAverage,price';
+  req.query.fields = 'name,price,ratingAverage,summary,difficulty';
+  next();
 };
