@@ -1,132 +1,100 @@
 const Tour = require('../models/tourModel');
 const APIQuery = require('../utils/apiQuery');
+const AppError = require('../utils/appError');
+const catchAsync = require('../utils/catchAsync');
 
-////////////// CRUD ////////////////////////
+////////////////////////// CRUD ///////////////////////////////
 
-exports.getAllTours = async (req, res) => {
-  try {
-    const apiQuery = new APIQuery(Tour.find(), req.query)
-      .filter()
-      .sort()
-      .project()
-      .paginate();
+exports.getAllTours = catchAsync(async (req, res, next) => {
+  const apiQuery = new APIQuery(Tour.find(), req.query)
+    .filter()
+    .sort()
+    .project()
+    .paginate();
+  const tours = await apiQuery.query;
 
-    const tours = await apiQuery.query;
+  res.json({
+    status: 'success',
+    requestedAt: req.requestTime,
+    results: tours.length,
+    data: { tours },
+  });
+});
 
-    res.json({
-      status: 'success',
-      requestedAt: req.requestTime,
-      results: tours.length,
-      data: { tours },
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: 'fail',
-      message: err,
-    });
+exports.getTour = catchAsync(async (req, res, next) => {
+  const tour = await Tour.findById(req.params.id).select('-__v');
+
+  if (!tour) {
+    return next(new AppError(`No tour found with ID ${req.params.id}`, 404));
   }
-};
 
-exports.getTour = async (req, res) => {
-  try {
-    const tour = await Tour.findById(req.params.id).select('-__v');
+  res.json({
+    status: 'success',
+    requestedAt: req.requestTime,
+    data: { tour },
+  });
+});
 
-    res.json({
-      status: 'success',
-      requestedAt: req.requestTime,
-      data: { tour },
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: 'Placeholder error string',
-    });
+exports.createTour = catchAsync(async (req, res, next) => {
+  const tour = await Tour.create(req.body);
+
+  res.status(201).json({
+    status: 'success',
+    data: { tour },
+  });
+});
+
+exports.updateTour = catchAsync(async (req, res, next) => {
+  let tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!tour) {
+    return next(new AppError(`No tour found with ID ${req.params.id}`, 404));
   }
-};
 
-exports.createTour = async (req, res) => {
-  try {
-    const tour = await Tour.create(req.body);
+  res.json({
+    status: 'success',
+    data: { tour },
+  });
+});
 
-    res.status(201).json({
-      status: 'success',
-      data: { tour },
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: 'Placeholder error',
-    });
+exports.deleteTour = catchAsync(async (req, res, next) => {
+  const tour = await Tour.findByIdAndDelete(req.params.id);
+
+  if (!tour) {
+    return next(new AppError(`No tour found with ID ${req.params.id}`, 404));
   }
-};
 
-exports.updateTour = async (req, res) => {
-  try {
-    let tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+  res.status(204).json({
+    status: 'success',
+    message: null,
+  });
+});
 
-    res.json({
-      status: 'success',
-      data: { tour },
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: err,
-    });
-  }
-};
+////////////////////////// AGGREGATORS ///////////////////////////////
 
-exports.deleteTour = async (req, res) => {
-  try {
-    await Tour.findByIdAndDelete(req.params.id);
+exports.getTourStats = catchAsync(async (req, res, next) => {
+  const stats = await Tour.getStats();
 
-    res.status(204).json({
-      status: 'success',
-      message: null,
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: err,
-    });
-  }
-};
+  res.json({
+    status: 'success',
+    data: { stats },
+  });
+});
 
-exports.getTourStats = async (req, res) => {
-  try {
-    const stats = await Tour.getStats();
+exports.getMonthlySched = catchAsync(async (req, res, next) => {
+  const sched = await Tour.getMonthlySched(req.params.year * 1);
 
-    res.json({
-      status: 'success',
-      data: { stats },
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: 'fail',
-      message: err,
-    });
-  }
-};
+  res.json({
+    status: 'success',
+    data: { sched },
+  });
+});
 
-exports.getMonthlySched = async (req, res) => {
-  try {
-    const sched = await Tour.getMonthlySched(req.params.year * 1);
-
-    res.json({
-      status: 'success',
-      data: { sched },
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: 'fail',
-      message: err,
-    });
-  }
-};
 ////////////////////////// MIDDLEWARE ///////////////////////////////
+
 exports.aliasTop5 = (req, res, next) => {
   req.query.limit = '5';
   req.query.sort = '-ratingAverage,price';
