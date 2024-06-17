@@ -1,8 +1,8 @@
 const express = require('express');
 const morgan = require('morgan');
+const AppError = require('./utils/appError.js');
 const tourRouter = require('./routes/tourRoutes.js');
 const userRouter = require('./routes/userRoutes.js');
-const AppError = require('./utils/appError.js');
 const errorController = require('./controllers/errorController.js');
 
 const app = express();
