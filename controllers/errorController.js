@@ -2,15 +2,17 @@ const AppError = require('../utils/appError');
 
 const handleCastErr = (err) => {
   const message = `Invalid ${err.path}: ${err.value}`;
+
   return new AppError(message, 400);
 };
 
 const handleValidationErr = (err) => {
-  let message = '';
+  let message = 'Please correct the following: ';
   for (errorName in err.errors) {
-    message += err.errors[errorName] + '\n';
+    message += err.errors[errorName].properties.message.replace('.', '') + '. ';
   }
-  return new AppError(message, 400);
+
+  return new AppError(message.trim(), 400);
 };
 
 const handleDupKey = (err) => {
@@ -18,8 +20,12 @@ const handleDupKey = (err) => {
   for (const [key, val] of Object.entries(err.keyValue)) {
     message += `The ${key}: ${val} has already been taken, please try something else`;
   }
+
   return new AppError(message, 400);
 };
+
+const handleJWTErr = () =>
+  new AppError('You are not authorized. Please try logging in again', 401);
 
 const sendErrDev = (err, res) => {
   res.status(err.statusCode).json({
@@ -59,6 +65,9 @@ module.exports = (err, req, res, next) => {
     if (err.name === 'CastError') error = handleCastErr(err);
     if (err.name === 'ValidationError') error = handleValidationErr(err);
     if (err.code === 11000) error = handleDupKey(err);
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      error = handleJWTErr();
+    }
 
     sendErrProd(error, res);
   }

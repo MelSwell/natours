@@ -1,21 +1,25 @@
 const express = require('express');
 const toursController = require('../controllers/toursController.js');
+const authController = require('../controllers/authController.js');
 
 const router = express.Router();
 
-// router.param('id', (req, res, next, val) => {
-//   console.log(`Tour id is: ${val}`);
-//   next();
-// });
-
 router
   .route('/')
-  .get(toursController.getAllTours)
-  .post(toursController.createTour);
+  .get(authController.protect, toursController.getAllTours)
+  .post(
+    authController.protect,
+    authController.restrictTo('admin', 'lead-guide'),
+    toursController.createTour,
+  );
 
 router
   .route('/top-5')
-  .get(toursController.aliasTop5, toursController.getAllTours);
+  .get(
+    authController.protect,
+    toursController.aliasTop5,
+    toursController.getAllTours,
+  );
 
 router.route('/stats').get(toursController.getTourStats);
 router.route('/monthly-sched/:year').get(toursController.getMonthlySched);
@@ -23,7 +27,15 @@ router.route('/monthly-sched/:year').get(toursController.getMonthlySched);
 router
   .route('/:id')
   .get(toursController.getTour)
-  .patch(toursController.updateTour)
-  .delete(toursController.deleteTour);
+  .patch(
+    authController.protect,
+    authController.restrictTo('admin', 'lead-guide'),
+    toursController.updateTour,
+  )
+  .delete(
+    authController.protect,
+    authController.restrictTo('admin', 'lead-guide'),
+    toursController.deleteTour,
+  );
 
 module.exports = router;
