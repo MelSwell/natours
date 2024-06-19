@@ -1,8 +1,9 @@
 const crypto = require('crypto');
+const { promisify } = require('util');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
-const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
+const AppError = require('../utils/appError');
 const sendEmail = require('../utils/email');
 const permitFields = require('../utils/permitFields');
 
@@ -27,10 +28,35 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError('Please provide an email and password', 400));
   }
 
-  const user = await User.findOne({ email }).select('+password');
-  if (!user || !(await user.isValidPW(password))) {
+  const user = await User.findOne({ email })
+    .select('+password')
+    .select('+loginAttempts');
+
+  if (!user || !(await user.isValidPW(password)) || user.isLocked) {
+    if (user.isLocked) {
+      return next(
+        new AppError(
+          'This account is locked. Please try again in 15 minutes',
+          401,
+        ),
+      );
+    }
+
+    if (user) {
+      user.loginAttempts++;
+      if (user.loginAttempts > 2) {
+        user.lockUntil = new Date(Date.now() + 900000);
+        user.loginAttempts = 0;
+      }
+      await user.save({ validateBeforeSave: false });
+    }
+
     return next(new AppError('Incorrect email or password', 401));
   }
+
+  user.lockUntil = undefined;
+  user.loginAttempts = 0;
+  await user.save({ validateBeforeSave: false });
 
   genJWTAndSend(res, 200, user);
 });
@@ -131,7 +157,7 @@ exports.protect = catchAsync(async (req, res, next) => {
     return next(new AppError('You must login to view this page', 401));
   }
 
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
   // user deletes acct but still has token
   const user = await User.findById(decoded.id);
@@ -163,14 +189,27 @@ exports.restrictTo = (...roles) => {
   };
 };
 
-const genJWTAndSend = (res, status, user, message) => {
+const genJWTAndSend = async (res, status, user, message) => {
+  // hide these two fields from the output:
+  user.loginAttempts = undefined;
+  user.password = undefined;
+
   let payload = {
     status: 'success',
     token: user.generateJWT(),
+    data: user,
   };
 
   if (status === 201) payload = { ...payload, data: user };
   if (message) payload = { ...payload, message };
 
+  const cookieOptions = {
+    expires: new Date(Date.now() + parseInt(process.env.JWT_COOKIE_EXPIRY)),
+    secure: true,
+    httpOnly: true,
+  };
+  if (process.env.NODE_ENV === 'development') cookieOptions.secure = false;
+
+  res.cookie('jwt', payload.token, cookieOptions);
   res.status(status).json(payload);
 };

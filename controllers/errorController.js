@@ -27,6 +27,13 @@ const handleDupKey = (err) => {
 const handleJWTErr = () =>
   new AppError('You are not authorized. Please try logging in again', 401);
 
+const handleRejectBody = () => {
+  return new AppError(
+    'The body of your request is being rejected due to its size',
+    400,
+  );
+};
+
 const sendErrDev = (err, res) => {
   res.status(err.statusCode).json({
     status: err.status,
@@ -68,6 +75,7 @@ module.exports = (err, req, res, next) => {
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
       error = handleJWTErr();
     }
+    if (err.status === 413) error = handleRejectBody();
 
     sendErrProd(error, res);
   }

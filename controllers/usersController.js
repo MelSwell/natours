@@ -3,17 +3,6 @@ const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const permitFields = require('../utils/permitFields');
 
-exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await User.find();
-
-  res.json({
-    status: 'success',
-    requestedAt: req.requestTime,
-    results: users.length,
-    data: { users },
-  });
-});
-
 exports.updateProfile = catchAsync(async (req, res, next) => {
   if (req.body.password || req.body.passwordConfirm) {
     return next(
@@ -36,6 +25,26 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     data: { user },
+  });
+});
+
+exports.deactivateAccount = catchAsync(async (req, res, next) => {
+  await User.findByIdAndUpdate(req.user.id, { active: false });
+
+  res.status(204).json({
+    status: 'success',
+    data: null,
+  });
+});
+
+exports.getAllUsers = catchAsync(async (req, res, next) => {
+  const users = await User.find();
+
+  res.json({
+    status: 'success',
+    requestedAt: req.requestTime,
+    results: users.length,
+    data: { users },
   });
 });
 

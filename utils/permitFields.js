@@ -4,7 +4,9 @@ const AppError = require('../utils/appError');
 module.exports = (reqBody, ...permittedFields) => {
   return new Promise((resolve, reject) => {
     if (size(reqBody) > 25) {
-      reject(new AppError('The body of your request is malformed', 400));
+      reject(
+        new AppError('The body of your request contains too many fields', 400),
+      );
     }
 
     const clone = {};
