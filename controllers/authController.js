@@ -205,10 +205,9 @@ const genJWTAndSend = async (res, status, user, message) => {
 
   const cookieOptions = {
     expires: new Date(Date.now() + parseInt(process.env.JWT_COOKIE_EXPIRY)),
-    secure: true,
     httpOnly: true,
   };
-  if (process.env.NODE_ENV === 'development') cookieOptions.secure = false;
+  if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
 
   res.cookie('jwt', payload.token, cookieOptions);
   res.status(status).json(payload);
